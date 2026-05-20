@@ -17,8 +17,7 @@ const pageClinic = document.getElementById('page-clinic');
 document.getElementById('nav-animal').addEventListener('click', () => switchTab('animal'));
 document.getElementById('nav-clinic').addEventListener('click', () => switchTab('clinic'));
 
-// New explicit modal event listeners to bypass module scope restrictions
-// This targets the main action buttons
+// Explicit modal event listeners to bypass module scope restrictions
 const addAnimalBtn = document.querySelector('button[onclick*="animal-modal"]');
 if (addAnimalBtn) {
     addAnimalBtn.removeAttribute('onclick');
@@ -31,7 +30,6 @@ if (addClinicBtn) {
     addClinicBtn.addEventListener('click', () => toggleModal('clinic-modal', true));
 }
 
-// This targets the cancel buttons inside the forms
 const cancelAnimalBtn = document.querySelector('#animal-modal button[onclick*="false"]');
 if (cancelAnimalBtn) {
     cancelAnimalBtn.removeAttribute('onclick');
@@ -134,11 +132,23 @@ async function loadData() {
                     <span class="px-2.5 py-1 text-xs font-semibold rounded-full border ${badgeClass}">${row.status}</span>
                 </td>
                 <td class="p-4 text-xs">
-                    <button onclick="editClinicRow('${row.id}', '${row.date}', ${row.hours}, '${escapeHtml(row.duties)}', '${escapeHtml(row.supervisor_email)}')" class="text-teal-400 hover:underline">Edit Entry</button>
-                    ${!isApproved ? `<br><button onclick="alert('Copy this exact verification link to send to your supervisor:\\n\\n' + window.location.origin + '/verify.html?id=${row.id}')" class="text-slate-400 hover:underline text-[11px]">Invite Supervisor Link</button>` : ''}
+                    <button id="edit-clinic-${row.id}" class="text-teal-400 hover:underline">Edit Entry</button>
+                    ${!isApproved ? `<br><button id="invite-clinic-${row.id}" class="text-slate-400 hover:underline text-[11px]">Invite Supervisor Link</button>` : ''}
                 </td>
             </tr>
         `;
+        
+        // Add dynamic module-safe event listeners to table row actions
+        setTimeout(() => {
+            document.getElementById(`edit-clinic-${row.id}`)?.addEventListener('click', () => {
+                editClinicRow(row.id, row.date, row.hours, row.duties, row.supervisor_email);
+            });
+            if (!isApproved) {
+                document.getElementById(`invite-clinic-${row.id}`)?.addEventListener('click', () => {
+                    alert('Copy this exact verification link to send to your supervisor:\n\n' + window.location.origin + '/verify.html?id=' + row.id);
+                });
+            }
+        }, 0);
     });
 }
 
