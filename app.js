@@ -213,7 +213,7 @@ document.getElementById('clinic-form').addEventListener('submit', async (e) => {
     }
 });
 
-// --- MULTI-TAB EXCEL GENERATOR ---
+// --- MULTI-TAB EXCEL GENERATOR WITH SIGNATURE STRINGS ---
 document.getElementById('export-btn').addEventListener('click', async () => {
     const { data: animData } = await supabaseClient.from('animal_experience').select('*');
     const { data: clinData } = await supabaseClient.from('clinic_experience').select('*');
@@ -224,14 +224,14 @@ document.getElementById('export-btn').addEventListener('click', async () => {
             <Table>
                 <Row><Cell><Data ss:Type="String">Name</Data></Cell><Cell><Data ss:Type="String">Date</Data></Cell><Cell><Data ss:Type="String">Hours</Data></Cell><Cell><Data ss:Type="String">Duties</Data></Cell><Cell><Data ss:Type="String">Contact</Data></Cell></Row>`;
     animData?.forEach(r => {
-        xml += `<Row><Cell><Data ss:Type="String">${r.experience_name}</Data></Cell><Cell><Data ss:Type="String">${r.date}</Data></Cell><Cell><Data ss:Type="Number">${r.hours}</Data></Cell><Cell><Data ss:Type="String">${r.duties}</Data></Cell><Cell><Data ss:Type="String">${r.contact_name}</Data></Cell></Row>`;
+        xml += `<Row><Cell><Data ss:Type="String">${escapeHtml(r.experience_name)}</Data></Cell><Cell><Data ss:Type="String">${r.date}</Data></Cell><Cell><Data ss:Type="Number">${r.hours}</Data></Cell><Cell><Data ss:Type="String">${escapeHtml(r.duties)}</Data></Cell><Cell><Data ss:Type="String">${escapeHtml(r.contact_name)}</Data></Cell></Row>`;
     });
     xml += `</Table></Worksheet>
         <Worksheet ss:Name="Clinic Experience">
             <Table>
-                <Row><Cell><Data ss:Type="String">Date</Data></Cell><Cell><Data ss:Type="String">Hours</Data></Cell><Cell><Data ss:Type="String">Duties</Data></Cell><Cell><Data ss:Type="String">Supervisor Email</Data></Cell><Cell><Data ss:Type="String">Supervisor Name</Data></Cell><Cell><Data ss:Type="String">Status</Data></Cell></Row>`;
+                <Row><Cell><Data ss:Type="String">Date</Data></Cell><Cell><Data ss:Type="String">Hours</Data></Cell><Cell><Data ss:Type="String">Duties</Data></Cell><Cell><Data ss:Type="String">Supervisor Email</Data></Cell><Cell><Data ss:Type="String">Supervisor Name</Data></Cell><Cell><Data ss:Type="String">Status</Data></Cell><Cell><Data ss:Type="String">Supervisor Signature Data</Data></Cell></Row>`;
     clinData?.forEach(r => {
-        xml += `<Row><Cell><Data ss:Type="String">${r.date}</Data></Cell><Cell><Data ss:Type="Number">${r.hours}</Data></Cell><Cell><Data ss:Type="String">${r.duties}</Data></Cell><Cell><Data ss:Type="String">${r.supervisor_email}</Data></Cell><Cell><Data ss:Type="String">${r.supervisor_name || 'N/A'}</Data></Cell><Cell><Data ss:Type="String">${r.status}</Data></Cell></Row>`;
+        xml += `<Row><Cell><Data ss:Type="String">${r.date}</Data></Cell><Cell><Data ss:Type="Number">${r.hours}</Data></Cell><Cell><Data ss:Type="String">${escapeHtml(r.duties)}</Data></Cell><Cell><Data ss:Type="String">${escapeHtml(r.supervisor_email)}</Data></Cell><Cell><Data ss:Type="String">${r.supervisor_name ? escapeHtml(r.supervisor_name) : 'N/A'}</Data></Cell><Cell><Data ss:Type="String">${r.status}</Data></Cell><Cell><Data ss:Type="String">${r.signature_url ? r.signature_url : 'No Signature Logged'}</Data></Cell></Row>`;
     });
     xml += `</Table></Worksheet></Workbook>`;
 
