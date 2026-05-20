@@ -13,10 +13,9 @@
     <div class="bg-slate-800 border border-slate-700 p-6 rounded-2xl max-w-md w-full shadow-2xl space-y-6">
         <div>
             <h1 class="text-xl font-bold text-teal-400">Shift Verification Portal</h1>
-            <p class="text-xs text-slate-400 mt-1">Please review the hours logged below, supply your legal name, and authorize with an on-screen signature signature.</p>
+            <p class="text-xs text-slate-400 mt-1">Please review the hours logged below, supply your name, and sign off to approve.</p>
         </div>
 
-        <!-- Meta Validation Card -->
         <div class="bg-slate-900 p-4 rounded-xl border border-slate-750 text-sm space-y-2 text-slate-300">
             <p><strong>Log Date:</strong> <span id="view-date">...</span></p>
             <p><strong>Total Hours:</strong> <span id="view-hours" class="text-teal-400 font-mono">...</span> Hours</p>
@@ -26,7 +25,6 @@
             </div>
         </div>
 
-        <!-- Execution Form -->
         <div class="space-y-4">
             <div>
                 <label class="block text-xs font-semibold uppercase text-slate-400 tracking-wider mb-1">Supervisor Full Name</label>
@@ -48,10 +46,9 @@
     </div>
 
     <script>
-        // Copy identical initialization parameters from your app.js config array
-       const SUPABASE_URL = "https://your-actual-project-id.supabase.co"; 
-       const SUPABASE_ANON_KEY = "sb_publishable_NKiKPIolSfkuClYlgraUfQ_vLf-PzpP"; 
-       const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const SUPABASE_URL = "https://your-project-id.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_NKiKPIolSfkuClYlgraUfQ_vLf-PzpP";
+        const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const urlParams = new URLSearchParams(window.location.search);
         const recordId = urlParams.get('id');
@@ -71,14 +68,13 @@
 
         document.getElementById('clear-btn').addEventListener('click', () => signaturePad.clear());
 
-        // Hydrate View Data
         async function fetchRecord() {
-            if(!recordId) return alert("Fatal Execution Error: Broken Verification Token Link.");
+            if(!recordId) return alert("Error: Missing Verification ID.");
             const { data, error } = await supabase.from('clinic_experience').select('*').eq('id', recordId).single();
             if(error) return alert("Record locating failure or link expired.");
             
             if(data.status === 'Approved') {
-                alert("This clinical milestone has already been securely signed and authorized.");
+                alert("This clinical milestone has already been approved and locked.");
                 window.close();
             }
             
@@ -88,24 +84,20 @@
         }
         fetchRecord();
 
-        // Process Execution & File Upload
         document.getElementById('submit-signature-btn').addEventListener('click', async () => {
             const name = document.getElementById('signer-name').value;
-            if(!name) return alert("Legal typed supervisor validation name required.");
-            if(signaturePad.isEmpty()) return alert("Signature vector path data cannot be blank.");
+            if(!name) return alert("Supervisor printed name is required.");
+            if(signaturePad.isEmpty()) return alert("Signature pad cannot be empty.");
 
-            // Convert canvas drawing vector array to a data blob upload binary
             const base64Data = signaturePad.toDataURL().split(',')[1];
             const blob = await fetch(`data:image/png;base64,${base64Data}`).then(res => res.blob());
             const filePath = `${recordId}/signature.png`;
 
-            // Push signature file to public assets storage partition
             const { error: uploadError } = await supabase.storage.from('signatures').upload(filePath, blob, { contentType: 'image/png', upsert: true });
-            if(uploadError) return alert("Storage Upload Block: " + uploadError.message);
+            if(uploadError) return alert("Storage Upload Blocked: " + uploadError.message);
 
             const { data: urlData } = supabase.storage.from('signatures').getPublicUrl(filePath);
 
-            // Execute master database status override commit
             const { error: updateError } = await supabase.from('clinic_experience').update({
                 supervisor_name: name,
                 signature_url: urlData.publicUrl,
