@@ -2,7 +2,10 @@
 const SUPABASE_URL = "https://dmddmjnefyaviibpqtod.supabase.co"; 
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZGRtam5lZnlhdmlpYnBxdG9kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMDQxODksImV4cCI6MjA5NDg4MDE4OX0.ZcdboqU-DC_UQxXwPoF5W35BddEN1ghxMmVQLe_5iNU";
 
+// Direct module import ensures the libraries are fully loaded before initialization
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import exceljs from 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/+esm';
+
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentUser = null;
 
@@ -39,7 +42,6 @@ if (cancelClinicBtn) {
     cancelClinicBtn.addEventListener('click', () => toggleModal('clinic-modal', false));
 }
 
-// Close signature viewer window button
 document.getElementById('close-sig-viewer-btn')?.addEventListener('click', () => {
     toggleModal('signature-view-modal', false);
 });
@@ -231,35 +233,92 @@ document.getElementById('clinic-form').addEventListener('submit', async (e) => {
     }
 });
 
-// --- MULTI-TAB EXCEL GENERATOR (CLEAN VERSION) ---
+// --- ADVANCED BINARY EXCEL GENERATOR WITH EMBEDDED IMAGES ---
 document.getElementById('export-btn').addEventListener('click', async () => {
     const { data: animData } = await supabaseClient.from('animal_experience').select('*');
     const { data: clinData } = await supabaseClient.from('clinic_experience').select('*');
 
-    let xml = `<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?>
-    <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:search" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html="http://www.w3.org/TR/REC-html40">
-        <Worksheet ss:Name="Animal Experience">
-            <Table>
-                <Row><Cell><Data ss:Type="String">Name</Data></Cell><Cell><Data ss:Type="String">Date</Data></Cell><Cell><Data ss:Type="String">Hours</Data></Cell><Cell><Data ss:Type="String">Duties</Data></Cell><Cell><Data ss:Type="String">Contact</Data></Cell></Row>`;
+    // Create a new binary workbook using ExcelJS
+    const workbook = new exceljs.Workbook();
+    
+    // 1. Add Animal Experience Sheet
+    const ws1 = workbook.addWorksheet('Animal Experience');
+    ws1.columns = [
+        { header: 'Name', key: 'name', width: 30 },
+        { header: 'Date', key: 'date', width: 15 },
+        { header: 'Hours', key: 'hours', width: 12 },
+        { header: 'Duties', key: 'duties', width: 40 },
+        { header: 'Contact', key: 'contact', width: 30 }
+    ];
     animData?.forEach(r => {
-        xml += `<Row><Cell><Data ss:Type="String">${escapeHtml(r.experience_name)}</Data></Cell><Cell><Data ss:Type="String">${r.date}</Data></Cell><Cell><Data ss:Type="Number">${r.hours}</Data></Cell><Cell><Data ss:Type="String">${escapeHtml(r.duties)}</Data></Cell><Cell><Data ss:Type="String">${escapeHtml(r.contact_name)}</Data></Cell></Row>`;
+        ws1.addRow({ name: r.experience_name, date: r.date, hours: Number(r.hours), duties: r.duties, contact: r.contact_name });
     });
-    xml += `</Table></Worksheet>
-        <Worksheet ss:Name="Clinic Experience">
-            <Table>
-                <Row><Cell><Data ss:Type="String">Date</Data></Cell><Cell><Data ss:Type="String">Hours</Data></Cell><Cell><Data ss:Type="String">Duties</Data></Cell><Cell><Data ss:Type="String">Supervisor Email</Data></Cell><Cell><Data ss:Type="String">Supervisor Name</Data></Cell><Cell><Data ss:Type="String">Status</Data></Cell><Cell><Data ss:Type="String">Verification Signature</Data></Cell></Row>`;
-    clinData?.forEach(r => {
-        const signatureStatusText = r.signature_url ? "Signed Verified (See Live Dashboard)" : "No Signature Logged";
-        xml += `<Row><Cell><Data ss:Type="String">${r.date}</Data></Cell><Cell><Data ss:Type="Number">${r.hours}</Data></Cell><Cell><Data ss:Type="String">${escapeHtml(r.duties)}</Data></Cell><Cell><Data ss:Type="String">${escapeHtml(r.supervisor_email)}</Data></Cell><Cell><Data ss:Type="String">${r.supervisor_name ? escapeHtml(r.supervisor_name) : 'N/A'}</Data></Cell><Cell><Data ss:Type="String">${r.status}</Data></Cell><Cell><Data ss:Type="String">${signatureStatusText}</Data></Cell></Row>`;
-    });
-    xml += `</Table></Worksheet></Workbook>`;
 
-    const blob = new Blob([xml], { type: "application/vnd.ms-excel" });
+    // 2. Add Clinic Experience Sheet
+    const ws2 = workbook.addWorksheet('Clinic Experience');
+    ws2.columns = [
+        { header: 'Date', key: 'date', width: 15 },
+        { header: 'Hours', key: 'hours', width: 12 },
+        { header: 'Duties', key: 'duties', width: 40 },
+        { header: 'Supervisor Email', key: 'email', width: 25 },
+        { header: 'Supervisor Name', key: 's_name', width: 20 },
+        { header: 'Status', key: 'status', width: 15 },
+        { header: 'Verification Signature File', key: 'sig', width: 25 }
+    ];
+
+    if (clinData) {
+        for (let i = 0; i < clinData.length; i++) {
+            const r = clinData[i];
+            const currentRowNum = i + 2; // Rows are 1-indexed, header is row 1
+            
+            ws2.addRow({
+                date: r.date,
+                hours: Number(r.hours),
+                duties: r.duties,
+                email: r.supervisor_email,
+                s_name: r.supervisor_name || 'N/A',
+                status: r.status,
+                sig: r.signature_url ? '' : 'No Signature Logged'
+            });
+
+            // If a signature drawing exists, decode it and embed it as an inline graphic
+            if (r.signature_url && r.signature_url.startsWith('data:image')) {
+                // Adjust row height to make space for the handwritten graphic
+                ws2.getRow(currentRowNum).height = 55;
+                
+                const imageId = workbook.addImage({
+                    base64: r.signature_url,
+                    extension: 'png',
+                });
+                
+                ws2.addImage(imageId, {
+                    tl: { col: 6, row: currentRowNum - 1 },
+                    ext: { width: 150, height: 65 },
+                    editAs: 'undefined'
+                });
+            }
+        }
+    }
+
+    // Style headers for both worksheets beautifully
+    [ws1, ws2].forEach(ws => {
+        ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        ws.getRow(1).eachCell(cell => {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } }; // Dark slate blue
+            cell.alignment = { vertical: 'middle', horizontal: 'left' };
+        });
+        ws.getRow(1).height = 25;
+    });
+
+    // Write file binary buffer output directly to browser download trigger
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = "VetTrack_Milestones_Backup.xls";
+    a.download = "VetTrack_Official_Milestones.xlsx";
     a.click();
+    URL.revokeObjectURL(url);
 });
 
 function escapeHtml(str) {
