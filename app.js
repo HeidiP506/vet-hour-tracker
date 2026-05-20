@@ -2,8 +2,9 @@
 const SUPABASE_URL = "https://dmddmjnefyaviibpqtod.supabase.co"; 
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZGRtam5lZnlhdmlpYnBxdG9kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMDQxODksImV4cCI6MjA5NDg4MDE4OX0.ZcdboqU-DC_UQxXwPoF5W35BddEN1ghxMmVQLe_5iNU";
 
-// Renamed to supabaseClient to bypass browser variable caching conflicts
-const supabaseClient = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Direct module import ensures the library is fully loaded before initialization
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentUser = null;
 
 // --- VIEW ROUTING ENGINE ---
