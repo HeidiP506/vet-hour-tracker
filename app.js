@@ -1,6 +1,6 @@
 // --- CONFIGURATION MANAGEMENT ---
-const SUPABASE_URL = "https://your-project-id.supabase.co"; 
-const SUPABASE_ANON_KEY = "sb_publishable_NKiKPIolSfkuClYlgraUfQ_vLf-PzpP";
+const SUPABASE_URL = "https://dmddmjnefyaviibpqtod.supabase.co"; 
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZGRtam5lZnlhdmlpYnBxdG9kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMDQxODksImV4cCI6MjA5NDg4MDE4OX0.ZcdboqU-DC_UQxXwPoF5W35BddEN1ghxMmVQLe_5iNU";
 
 const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentUser = null;
