@@ -1,7 +1,6 @@
 // --- CONFIGURATION MANAGEMENT ---
-// REPLACE THESE STRINGS WITH THE EXACT VALUES FROM YOUR SUPABASE API ACCESS SETTINGS
-const SUPABASE_URL = "https://your-actual-project-id.supabase.co"; 
-const SUPABASE_ANON_KEY = "sb_publishable_NKiKPIolSfkuClYlgraUfQ_vLf-PzpP"; 
+const SUPABASE_URL = "https://your-project-id.supabase.co"; 
+const SUPABASE_ANON_KEY = "sb_publishable_NKiKPIolSfkuClYlgraUfQ_vLf-PzpP";
 
 const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentUser = null;
@@ -61,7 +60,7 @@ document.getElementById('signup-btn').addEventListener('click', async () => {
     const password = document.getElementById('auth-password').value;
     const { error } = await supabase.auth.signUp({ email, password });
     if (error) alert("Sign up error: " + error.message);
-    else alert("Account verification request deployed to your email address!");
+    else alert("Account registration successful! Check your email inbox for a confirmation verification link.");
 });
 
 document.getElementById('logout-btn').addEventListener('click', () => supabase.auth.signOut());
@@ -70,7 +69,6 @@ document.getElementById('logout-btn').addEventListener('click', () => supabase.a
 async function loadData() {
     if (!currentUser) return;
     
-    // Fetch Animal Experience Records
     const { data: animals } = await supabase.from('animal_experience').select('*').order('date', { ascending: false });
     const animalBody = document.getElementById('animal-table-body');
     animalBody.innerHTML = '';
@@ -86,7 +84,6 @@ async function loadData() {
         `;
     });
 
-    // Fetch Clinical Experience Records
     const { data: clinics } = await supabase.from('clinic_experience').select('*').order('date', { ascending: false });
     const clinicBody = document.getElementById('clinic-table-body');
     clinicBody.innerHTML = '';
@@ -108,7 +105,7 @@ async function loadData() {
                 </td>
                 <td class="p-4 text-xs">
                     <button onclick="editClinicRow('${row.id}', '${row.date}', ${row.hours}, '${escapeHtml(row.duties)}', '${escapeHtml(row.supervisor_email)}')" class="text-teal-400 hover:underline">Edit Entry</button>
-                    ${!isApproved ? `<br><button onclick="alert('Verification Portal Link:\\n\\n' + window.location.origin + '/verify.html?id=${row.id}')" class="text-slate-400 hover:underline text-[11px]">Copy Signing Link</button>` : ''}
+                    ${!isApproved ? `<br><button onclick="alert('Copy this exact verification link to send to your supervisor:\\n\\n' + window.location.origin + '/verify.html?id=${row.id}')" class="text-slate-400 hover:underline text-[11px]">Invite Supervisor Link</button>` : ''}
                 </td>
             </tr>
         `;
@@ -149,7 +146,7 @@ document.getElementById('clinic-form').addEventListener('submit', async (e) => {
         hours: parseFloat(document.getElementById('clin-hours').value),
         duties: document.getElementById('clin-duties').value,
         supervisor_email: document.getElementById('clin-email').value,
-        status: 'Pending', // Any data alteration drops verification state and invalidates signature
+        status: 'Pending', 
         supervisor_name: null,
         signature_url: null
     };
@@ -170,7 +167,7 @@ document.getElementById('clinic-form').addEventListener('submit', async (e) => {
     }
 });
 
-// --- CLIENT-SIDE MULTI-TAB EXCEL PARSER ---
+// --- MULTI-TAB EXCEL GENERATOR ---
 document.getElementById('export-btn').addEventListener('click', async () => {
     const { data: animData } = await supabase.from('animal_experience').select('*');
     const { data: clinData } = await supabase.from('clinic_experience').select('*');
@@ -196,7 +193,7 @@ document.getElementById('export-btn').addEventListener('click', async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = "VetTrack_Experience_Backup.xls";
+    a.download = "VetTrack_Milestones_Backup.xls";
     a.click();
 });
 
