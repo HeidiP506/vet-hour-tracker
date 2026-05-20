@@ -2,7 +2,8 @@
 const SUPABASE_URL = "https://dmddmjnefyaviibpqtod.supabase.co"; 
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZGRtam5lZnlhdmlpYnBxdG9kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMDQxODksImV4cCI6MjA5NDg4MDE4OX0.ZcdboqU-DC_UQxXwPoF5W35BddEN1ghxMmVQLe_5iNU";
 
-const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Renamed to supabaseClient to bypass browser variable caching conflicts
+const supabaseClient = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentUser = null;
 
 // --- VIEW ROUTING ENGINE ---
@@ -19,12 +20,12 @@ function switchTab(target) {
         pageAnimal.classList.remove('hidden');
         pageClinic.classList.add('hidden');
         document.getElementById('nav-animal').className = "px-4 py-2 rounded-lg text-sm font-medium bg-slate-700 text-teal-400 transition";
-        document.getElementById('nav-clinic').className = "px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-700 text-slate-300 transition";
+        document.getElementById('nav-clinic').className = "px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-750 text-slate-300 transition";
     } else {
         pageAnimal.classList.add('hidden');
         pageClinic.classList.remove('hidden');
         document.getElementById('nav-clinic').className = "px-4 py-2 rounded-lg text-sm font-medium bg-slate-700 text-teal-400 transition";
-        document.getElementById('nav-animal').className = "px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-700 text-slate-300 transition";
+        document.getElementById('nav-animal').className = "px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-750 text-slate-300 transition";
     }
 }
 
@@ -35,7 +36,7 @@ function toggleModal(id, open) {
 }
 
 // --- USER AUTHENTICATION STATE MACHINE ---
-supabase.auth.onAuthStateChange((event, session) => {
+supabaseClient.auth.onAuthStateChange((event, session) => {
     if (session) {
         currentUser = session.user;
         authScreen.classList.add('hidden');
@@ -51,25 +52,25 @@ supabase.auth.onAuthStateChange((event, session) => {
 document.getElementById('login-btn').addEventListener('click', async () => {
     const email = document.getElementById('auth-email').value;
     const password = document.getElementById('auth-password').value;
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (error) alert(error.message);
 });
 
 document.getElementById('signup-btn').addEventListener('click', async () => {
     const email = document.getElementById('auth-email').value;
     const password = document.getElementById('auth-password').value;
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { error } = await supabaseClient.auth.signUp({ email, password });
     if (error) alert("Sign up error: " + error.message);
     else alert("Account registration successful! Check your email inbox for a confirmation verification link.");
 });
 
-document.getElementById('logout-btn').addEventListener('click', () => supabase.auth.signOut());
+document.getElementById('logout-btn').addEventListener('click', () => supabaseClient.auth.signOut());
 
 // --- DATA ACCESS OPERATIONS ---
 async function loadData() {
     if (!currentUser) return;
     
-    const { data: animals } = await supabase.from('animal_experience').select('*').order('date', { ascending: false });
+    const { data: animals } = await supabaseClient.from('animal_experience').select('*').order('date', { ascending: false });
     const animalBody = document.getElementById('animal-table-body');
     animalBody.innerHTML = '';
     animals?.forEach(row => {
@@ -84,7 +85,7 @@ async function loadData() {
         `;
     });
 
-    const { data: clinics } = await supabase.from('clinic_experience').select('*').order('date', { ascending: false });
+    const { data: clinics } = await supabaseClient.from('clinic_experience').select('*').order('date', { ascending: false });
     const clinicBody = document.getElementById('clinic-table-body');
     clinicBody.innerHTML = '';
     clinics?.forEach(row => {
@@ -123,7 +124,7 @@ document.getElementById('animal-form').addEventListener('submit', async (e) => {
         duties: document.getElementById('anim-duties').value,
         contact_name: document.getElementById('anim-contact').value
     };
-    const { error } = await supabase.from('animal_experience').insert([payload]);
+    const { error } = await supabaseClient.from('animal_experience').insert([payload]);
     if (error) alert(error.message);
     else { toggleModal('animal-modal', false); document.getElementById('animal-form').reset(); loadData(); }
 });
@@ -153,9 +154,9 @@ document.getElementById('clinic-form').addEventListener('submit', async (e) => {
 
     let result;
     if (id) {
-        result = await supabase.from('clinic_experience').update(payload).eq('id', id);
+        result = await supabaseClient.from('clinic_experience').update(payload).eq('id', id);
     } else {
-        result = await supabase.from('clinic_experience').insert([payload]);
+        result = await supabaseClient.from('clinic_experience').insert([payload]);
     }
 
     if (result.error) alert(result.error.message);
@@ -169,8 +170,8 @@ document.getElementById('clinic-form').addEventListener('submit', async (e) => {
 
 // --- MULTI-TAB EXCEL GENERATOR ---
 document.getElementById('export-btn').addEventListener('click', async () => {
-    const { data: animData } = await supabase.from('animal_experience').select('*');
-    const { data: clinData } = await supabase.from('clinic_experience').select('*');
+    const { data: animData } = await supabaseClient.from('animal_experience').select('*');
+    const { data: clinData } = await supabaseClient.from('clinic_experience').select('*');
 
     let xml = `<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?>
     <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:search" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html="http://www.w3.org/TR/REC-html40">
