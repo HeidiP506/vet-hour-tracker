@@ -3,113 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VetTrack - Secure Supervisor Verification Portal</title>
+    <title>VetTrack - Secure Supervisor Verification</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans flex items-center justify-center p-4">
 
-    <div class="bg-slate-800 border border-slate-700 p-6 rounded-2xl max-w-md w-full shadow-2xl space-y-6">
-        <div>
-            <h1 class="text-xl font-bold text-teal-400">Shift Verification Portal</h1>
-            <p class="text-xs text-slate-400 mt-1">Please review the hours logged below, supply your name, and sign off to approve.</p>
+    <div class="bg-slate-800 p-8 rounded-2xl border border-slate-700 w-full max-w-lg shadow-2xl space-y-6">
+        <div class="text-center">
+            <h1 class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-emerald-400">VetTrack Verification</h1>
+            <p class="text-slate-400 text-xs mt-1 uppercase tracking-wider">Official VMCAS Hours Sign-Off Portal</p>
         </div>
 
-        <div class="bg-slate-900 p-4 rounded-xl border border-slate-750 text-sm space-y-2 text-slate-300">
-            <p><strong>Log Date:</strong> <span id="view-date">...</span></p>
-            <p><strong>Total Hours:</strong> <span id="view-hours" class="text-teal-400 font-mono">...</span> Hours</p>
-            <div>
-                <strong class="block mb-0.5">Clinical Operations Performed:</strong>
-                <p id="view-duties" class="text-xs text-slate-400 leading-relaxed bg-slate-950 p-2.5 rounded border border-slate-800"></p>
+        <div class="bg-slate-900 border border-slate-700/60 rounded-xl p-5 space-y-3">
+            <div class="flex justify-between border-b border-slate-800 pb-2 text-sm">
+                <span class="text-slate-400 font-medium">Date of Shift:</span>
+                <span id="display-date" class="font-semibold text-slate-200">Loading...</span>
+            </div>
+            <div class="flex justify-between border-b border-slate-800 pb-2 text-sm">
+                <span class="text-slate-400 font-medium">Hours Logged:</span>
+                <span id="display-hours" class="font-mono font-bold text-teal-400 text-base">Loading...</span>
+            </div>
+            <div class="text-sm space-y-1">
+                <span class="text-slate-400 font-medium block">Clinical Procedures &amp; Duties Performed:</span>
+                <p id="display-duties" class="text-slate-300 bg-slate-950/40 p-3 rounded-lg border border-slate-800 italic text-sm min-h-[60px]">Loading...</p>
             </div>
         </div>
 
-        <div class="space-y-4">
+        <form id="verify-form" class="space-y-4">
             <div>
-                <label class="block text-xs font-semibold uppercase text-slate-400 tracking-wider mb-1">Supervisor Full Name</label>
-                <input id="signer-name" type="text" placeholder="Dr. Jane Doe, DVM" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-teal-500">
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Your Full Name (DVM / Practice Manager)</label>
+                <input id="supervisor-name" type="text" required placeholder="Dr. Jane Smith, DVM" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-teal-500 transition">
             </div>
 
             <div>
-                <label class="block text-xs font-semibold uppercase text-slate-400 tracking-wider mb-1">Authorization Signature</label>
-                <div class="bg-white rounded-xl overflow-hidden h-40 relative border-2 border-slate-700">
-                    <canvas id="signature-canvas" class="w-full h-full touch-none cursor-crosshair"></canvas>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Touchpad Signature</label>
+                <div class="bg-white rounded-xl border border-slate-700 overflow-hidden relative">
+                    <canvas id="signature-canvas" class="w-full h-40 bg-white block touch-none cursor-crosshair"></canvas>
+                    <button type="button" id="clear-btn" class="absolute bottom-2 right-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-[11px] font-bold px-2 py-1 rounded transition uppercase">Clear</button>
                 </div>
             </div>
 
-            <div class="flex space-x-3 pt-2">
-                <button id="clear-btn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 py-2.5 rounded-xl text-sm font-medium transition">Clear</button>
-                <button id="submit-signature-btn" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-sm font-medium transition">Approve & Sign</button>
-            </div>
+            <button type="submit" id="submit-btn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-3 rounded-xl transition shadow-lg shadow-emerald-900/20 pt-2">Approve &amp; Confirm Hours</button>
+        </form>
+
+        <div id="success-message" class="hidden text-center p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-xl space-y-2">
+            <span class="text-3xl">🎉</span>
+            <h3 class="text-lg font-bold text-emerald-400">Hours Successfully Verified!</h3>
+            <p class="text-xs text-slate-400">Thank you for supporting this pre-veterinary candidate's professional development milestone. You can now close this window.</p>
         </div>
     </div>
 
-    <script>
-        const SUPABASE_URL = "https://dmddmjnefyaviibpqtod.supabase.co";
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZGRtam5lZnlhdmlpYnBxdG9kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMDQxODksImV4cCI6MjA5NDg4MDE4OX0.ZcdboqU-DC_UQxXwPoF5W35BddEN1ghxMmVQLe_5iNU";
-        const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const recordId = urlParams.get('id');
-
-        const canvas = document.getElementById('signature-canvas');
-        const signaturePad = new SignaturePad(canvas, { penColor: 'rgb(15, 23, 42)' });
-
-        function resizeCanvas() {
-            const ratio = Math.max(window.devicePixelRatio || 1, 1);
-            canvas.width = canvas.offsetWidth * ratio;
-            canvas.height = canvas.offsetHeight * ratio;
-            canvas.getContext("2d").scale(ratio, ratio);
-            signaturePad.clear();
-        }
-        window.addEventListener("resize", resizeCanvas);
-        resizeCanvas();
-
-        document.getElementById('clear-btn').addEventListener('click', () => signaturePad.clear());
-
-        async function fetchRecord() {
-            if(!recordId) return alert("Error: Missing Verification ID.");
-            const { data, error } = await supabase.from('clinic_experience').select('*').eq('id', recordId).single();
-            if(error) return alert("Record locating failure or link expired.");
-            
-            if(data.status === 'Approved') {
-                alert("This clinical milestone has already been approved and locked.");
-                window.close();
-            }
-            
-            document.getElementById('view-date').innerText = data.date;
-            document.getElementById('view-hours').innerText = data.hours;
-            document.getElementById('view-duties').innerText = data.duties;
-        }
-        fetchRecord();
-
-        document.getElementById('submit-signature-btn').addEventListener('click', async () => {
-            const name = document.getElementById('signer-name').value;
-            if(!name) return alert("Supervisor printed name is required.");
-            if(signaturePad.isEmpty()) return alert("Signature pad cannot be empty.");
-
-            const base64Data = signaturePad.toDataURL().split(',')[1];
-            const blob = await fetch(`data:image/png;base64,${base64Data}`).then(res => res.blob());
-            const filePath = `${recordId}/signature.png`;
-
-            const { error: uploadError } = await supabase.storage.from('signatures').upload(filePath, blob, { contentType: 'image/png', upsert: true });
-            if(uploadError) return alert("Storage Upload Blocked: " + uploadError.message);
-
-            const { data: urlData } = supabase.storage.from('signatures').getPublicUrl(filePath);
-
-            const { error: updateError } = await supabase.from('clinic_experience').update({
-                supervisor_name: name,
-                signature_url: urlData.publicUrl,
-                status: 'Approved'
-            }).eq('id', recordId);
-
-            if(updateError) alert("Database update rejected: " + updateError.message);
-            else {
-                alert("Thank you! Hours verified and logged securely.");
-                document.body.innerHTML = `<div class="text-center text-emerald-400 font-bold p-8 bg-slate-800 rounded-xl border border-slate-700">✓ Verification Completed Successfully.</div>`;
-            }
-        });
-    </script>
+    <script type="module" src="verify.js"></script>
 </body>
 </html>
