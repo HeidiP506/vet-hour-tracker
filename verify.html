@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VetTrack - Secure Supervisor Verification Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-slate-800 border border-slate-700 p-6 rounded-2xl max-w-md w-full shadow-2xl space-y-6">
+        <div>
+            <h1 class="text-xl font-bold text-teal-400">Shift Verification Portal</h1>
+            <p class="text-xs text-slate-400 mt-1">Please review the hours logged below, supply your legal name, and authorize with an on-screen signature signature.</p>
+        </div>
+
+        <!-- Meta Validation Card -->
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-750 text-sm space-y-2 text-slate-300">
+            <p><strong>Log Date:</strong> <span id="view-date">...</span></p>
+            <p><strong>Total Hours:</strong> <span id="view-hours" class="text-teal-400 font-mono">...</span> Hours</p>
+            <div>
+                <strong class="block mb-0.5">Clinical Operations Performed:</strong>
+                <p id="view-duties" class="text-xs text-slate-400 leading-relaxed bg-slate-950 p-2.5 rounded border border-slate-800"></p>
+            </div>
+        </div>
+
+        <!-- Execution Form -->
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold uppercase text-slate-400 tracking-wider mb-1">Supervisor Full Name</label>
+                <input id="signer-name" type="text" placeholder="Dr. Jane Doe, DVM" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-teal-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold uppercase text-slate-400 tracking-wider mb-1">Authorization Signature</label>
+                <div class="bg-white rounded-xl overflow-hidden h-40 relative border-2 border-slate-700">
+                    <canvas id="signature-canvas" class="w-full h-full touch-none cursor-crosshair"></canvas>
+                </div>
+            </div>
+
+            <div class="flex space-x-3 pt-2">
+                <button id="clear-btn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 py-2.5 rounded-xl text-sm font-medium transition">Clear</button>
+                <button id="submit-signature-btn" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-sm font-medium transition">Approve & Sign</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Copy identical initialization parameters from your app.js config array
+        const SUPABASE_URL = "https://your-project-id.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.your-key-here";
+        const supabase = sb.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const recordId = urlParams.get('id');
+
+        const canvas = document.getElementById('signature-canvas');
+        const signaturePad = new SignaturePad(canvas, { penColor: 'rgb(15, 23, 42)' });
+
+        function resizeCanvas() {
+            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+            canvas.width = canvas.offsetWidth * ratio;
+            canvas.height = canvas.offsetHeight * ratio;
+            canvas.getContext("2d").scale(ratio, ratio);
+            signaturePad.clear();
+        }
+        window.addEventListener("resize", resizeCanvas);
+        resizeCanvas();
+
+        document.getElementById('clear-btn').addEventListener('click', () => signaturePad.clear());
+
+        // Hydrate View Data
+        async function fetchRecord() {
+            if(!recordId) return alert("Fatal Execution Error: Broken Verification Token Link.");
+            const { data, error } = await supabase.from('clinic_experience').select('*').eq('id', recordId).single();
+            if(error) return alert("Record locating failure or link expired.");
+            
+            if(data.status === 'Approved') {
+                alert("This clinical milestone has already been securely signed and authorized.");
+                window.close();
+            }
+            
+            document.getElementById('view-date').innerText = data.date;
+            document.getElementById('view-hours').innerText = data.hours;
+            document.getElementById('view-duties').innerText = data.duties;
+        }
+        fetchRecord();
+
+        // Process Execution & File Upload
+        document.getElementById('submit-signature-btn').addEventListener('click', async () => {
+            const name = document.getElementById('signer-name').value;
+            if(!name) return alert("Legal typed supervisor validation name required.");
+            if(signaturePad.isEmpty()) return alert("Signature vector path data cannot be blank.");
+
+            // Convert canvas drawing vector array to a data blob upload binary
+            const base64Data = signaturePad.toDataURL().split(',')[1];
+            const blob = await fetch(`data:image/png;base64,${base64Data}`).then(res => res.blob());
+            const filePath = `${recordId}/signature.png`;
+
+            // Push signature file to public assets storage partition
+            const { error: uploadError } = await supabase.storage.from('signatures').upload(filePath, blob, { contentType: 'image/png', upsert: true });
+            if(uploadError) return alert("Storage Upload Block: " + uploadError.message);
+
+            const { data: urlData } = supabase.storage.from('signatures').getPublicUrl(filePath);
+
+            // Execute master database status override commit
+            const { error: updateError } = await supabase.from('clinic_experience').update({
+                supervisor_name: name,
+                signature_url: urlData.publicUrl,
+                status: 'Approved'
+            }).eq('id', recordId);
+
+            if(updateError) alert("Database update rejected: " + updateError.message);
+            else {
+                alert("Thank you! Hours verified and logged securely.");
+                document.body.innerHTML = `<div class="text-center text-emerald-400 font-bold p-8 bg-slate-800 rounded-xl border border-slate-700">✓ Verification Completed Successfully.</div>`;
+            }
+        });
+    </script>
+</body>
+</html>

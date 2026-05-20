@@ -1,0 +1,206 @@
+// --- CONFIGURATION MANAGEMENT ---
+// REPLACE THESE STRINGS WITH THE EXACT VALUES FROM YOUR SUPABASE API ACCESS SETTINGS
+const SUPABASE_URL = "https://your-project-id.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.your-key-here";
+
+const supabase = sb.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let currentUser = null;
+
+// --- VIEW ROUTING ENGINE ---
+const authScreen = document.getElementById('auth-screen');
+const appScreen = document.getElementById('app-screen');
+const pageAnimal = document.getElementById('page-animal');
+const pageClinic = document.getElementById('page-clinic');
+
+document.getElementById('nav-animal').addEventListener('click', () => switchTab('animal'));
+document.getElementById('nav-clinic').addEventListener('click', () => switchTab('clinic'));
+
+function switchTab(target) {
+    if (target === 'animal') {
+        pageAnimal.classList.remove('hidden');
+        pageClinic.classList.add('hidden');
+        document.getElementById('nav-animal').className = "px-4 py-2 rounded-lg text-sm font-medium bg-slate-700 text-teal-400 transition";
+        document.getElementById('nav-clinic').className = "px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-700 text-slate-300 transition";
+    } else {
+        pageAnimal.classList.add('hidden');
+        pageClinic.classList.remove('hidden');
+        document.getElementById('nav-clinic').className = "px-4 py-2 rounded-lg text-sm font-medium bg-slate-700 text-teal-400 transition";
+        document.getElementById('nav-animal').className = "px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-700 text-slate-300 transition";
+    }
+}
+
+function toggleModal(id, open) {
+    const el = document.getElementById(id);
+    if (open) { el.classList.remove('hidden'); el.classList.add('flex'); }
+    else { el.classList.add('hidden'); el.classList.remove('flex'); }
+}
+
+// --- USER AUTHENTICATION STATE MACHINE ---
+supabase.auth.onAuthStateChange((event, session) => {
+    if (session) {
+        currentUser = session.user;
+        authScreen.classList.add('hidden');
+        appScreen.classList.remove('hidden');
+        loadData();
+    } else {
+        currentUser = null;
+        authScreen.classList.remove('hidden');
+        appScreen.classList.add('hidden');
+    }
+});
+
+document.getElementById('login-btn').addEventListener('click', async () => {
+    const email = document.getElementById('auth-email').value;
+    const password = document.getElementById('auth-password').value;
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) alert(error.message);
+});
+
+document.getElementById('signup-btn').addEventListener('click', async () => {
+    const email = document.getElementById('auth-email').value;
+    const password = document.getElementById('auth-password').value;
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) alert("Sign up error: " + error.message);
+    else alert("Account verification request deployed to your email address!");
+});
+
+document.getElementById('logout-btn').addEventListener('click', () => supabase.auth.signOut());
+
+// --- DATA ACCESS OPERATIONS ---
+async function loadData() {
+    if (!currentUser) return;
+    
+    // Fetch Animal Experience Records
+    const { data: animals } = await supabase.from('animal_experience').select('*').order('date', { ascending: false });
+    const animalBody = document.getElementById('animal-table-body');
+    animalBody.innerHTML = '';
+    animals?.forEach(row => {
+        animalBody.innerHTML += `
+            <tr class="hover:bg-slate-750 transition">
+                <td class="p-4 font-semibold text-slate-200">${escapeHtml(row.experience_name)}</td>
+                <td class="p-4">${row.date}</td>
+                <td class="p-4 font-mono text-teal-400">${row.hours}</td>
+                <td class="p-4 max-w-xs truncate">${escapeHtml(row.duties)}</td>
+                <td class="p-4 text-slate-400">${escapeHtml(row.contact_name)}</td>
+            </tr>
+        `;
+    });
+
+    // Fetch Clinical Experience Records
+    const { data: clinics } = await supabase.from('clinic_experience').select('*').order('date', { ascending: false });
+    const clinicBody = document.getElementById('clinic-table-body');
+    clinicBody.innerHTML = '';
+    clinics?.forEach(row => {
+        const isApproved = row.status === 'Approved';
+        const badgeClass = isApproved ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+        
+        clinicBody.innerHTML += `
+            <tr class="hover:bg-slate-750 transition">
+                <td class="p-4">${row.date}</td>
+                <td class="p-4 font-mono text-teal-400">${row.hours}</td>
+                <td class="p-4 max-w-xs truncate">${escapeHtml(row.duties)}</td>
+                <td class="p-4">
+                    <div class="text-xs">${escapeHtml(row.supervisor_email)}</div>
+                    <div class="text-[11px] text-slate-500">${row.supervisor_name ? escapeHtml(row.supervisor_name) : 'Unsigned'}</div>
+                </td>
+                <td class="p-4">
+                    <span class="px-2.5 py-1 text-xs font-semibold rounded-full border ${badgeClass}">${row.status}</span>
+                </td>
+                <td class="p-4 text-xs">
+                    <button onclick="editClinicRow('${row.id}', '${row.date}', ${row.hours}, '${escapeHtml(row.duties)}', '${escapeHtml(row.supervisor_email)}')" class="text-teal-400 hover:underline">Edit Entry</button>
+                    ${!isApproved ? `<br><button onclick="alert('Verification Portal Link:\\n\\n' + window.location.origin + '/verify.html?id=${row.id}')" class="text-slate-400 hover:underline text-[11px]">Copy Signing Link</button>` : ''}
+                </td>
+            </tr>
+        `;
+    });
+}
+
+// --- MUTATION HANDLING ENGINE ---
+document.getElementById('animal-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+        user_id: currentUser.id,
+        experience_name: document.getElementById('anim-name').value,
+        date: document.getElementById('anim-date').value,
+        hours: parseFloat(document.getElementById('anim-hours').value),
+        duties: document.getElementById('anim-duties').value,
+        contact_name: document.getElementById('anim-contact').value
+    };
+    const { error } = await supabase.from('animal_experience').insert([payload]);
+    if (error) alert(error.message);
+    else { toggleModal('animal-modal', false); document.getElementById('animal-form').reset(); loadData(); }
+});
+
+function editClinicRow(id, date, hours, duties, email) {
+    document.getElementById('clinic-edit-id').value = id;
+    document.getElementById('clin-date').value = date;
+    document.getElementById('clin-hours').value = hours;
+    document.getElementById('clin-duties').value = duties;
+    document.getElementById('clin-email').value = email;
+    toggleModal('clinic-modal', true);
+}
+
+document.getElementById('clinic-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('clinic-edit-id').value;
+    const payload = {
+        user_id: currentUser.id,
+        date: document.getElementById('clin-date').value,
+        hours: parseFloat(document.getElementById('clin-hours').value),
+        duties: document.getElementById('clin-duties').value,
+        supervisor_email: document.getElementById('clin-email').value,
+        status: 'Pending', // Any data alteration drops verification state and invalidates signature
+        supervisor_name: null,
+        signature_url: null
+    };
+
+    let result;
+    if (id) {
+        result = await supabase.from('clinic_experience').update(payload).eq('id', id);
+    } else {
+        result = await supabase.from('clinic_experience').insert([payload]);
+    }
+
+    if (result.error) alert(result.error.message);
+    else { 
+        toggleModal('clinic-modal', false); 
+        document.getElementById('clinic-form').reset(); 
+        document.getElementById('clinic-edit-id').value = '';
+        loadData(); 
+    }
+});
+
+// --- CLIENT-SIDE MULTI-TAB EXCEL PARSER ---
+document.getElementById('export-btn').addEventListener('click', async () => {
+    const { data: animData } = await supabase.from('animal_experience').select('*');
+    const { data: clinData } = await supabase.from('clinic_experience').select('*');
+
+    let xml = `<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?>
+    <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:search" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html="http://www.w3.org/TR/REC-html40">
+        <Worksheet ss:Name="Animal Experience">
+            <Table>
+                <Row><Cell><Data ss:Type="String">Name</Data></Cell><Cell><Data ss:Type="String">Date</Data></Cell><Cell><Data ss:Type="String">Hours</Data></Cell><Cell><Data ss:Type="String">Duties</Data></Cell><Cell><Data ss:Type="String">Contact</Data></Cell></Row>`;
+    animData?.forEach(r => {
+        xml += `<Row><Cell><Data ss:Type="String">${r.experience_name}</Data></Cell><Cell><Data ss:Type="String">${r.date}</Data></Cell><Cell><Data ss:Type="Number">${r.hours}</Data></Cell><Cell><Data ss:Type="String">${r.duties}</Data></Cell><Cell><Data ss:Type="String">${r.contact_name}</Data></Cell></Row>`;
+    });
+    xml += `</Table></Worksheet>
+        <Worksheet ss:Name="Clinic Experience">
+            <Table>
+                <Row><Cell><Data ss:Type="String">Date</Data></Cell><Cell><Data ss:Type="String">Hours</Data></Cell><Cell><Data ss:Type="String">Duties</Data></Cell><Cell><Data ss:Type="String">Supervisor Email</Data></Cell><Cell><Data ss:Type="String">Supervisor Name</Data></Cell><Cell><Data ss:Type="String">Status</Data></Cell></Row>`;
+    clinData?.forEach(r => {
+        xml += `<Row><Cell><Data ss:Type="String">${r.date}</Data></Cell><Cell><Data ss:Type="Number">${r.hours}</Data></Cell><Cell><Data ss:Type="String">${r.duties}</Data></Cell><Cell><Data ss:Type="String">${r.supervisor_email}</Data></Cell><Cell><Data ss:Type="String">${r.supervisor_name || 'N/A'}</Data></Cell><Cell><Data ss:Type="String">${r.status}</Data></Cell></Row>`;
+    });
+    xml += `</Table></Worksheet></Workbook>`;
+
+    const blob = new Blob([xml], { type: "application/vnd.ms-excel" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "VetTrack_Experience_Backup.xls";
+    a.click();
+});
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
