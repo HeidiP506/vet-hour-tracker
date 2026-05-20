@@ -145,7 +145,13 @@ async function loadData() {
             });
             if (!isApproved) {
                 document.getElementById(`invite-clinic-${row.id}`)?.addEventListener('click', () => {
-                    alert('Copy this exact verification link to send to your supervisor:\n\n' + window.location.origin + '/verify.html?id=' + row.id);
+                    const url = window.location.origin + '/verify.html?id=' + row.id;
+                    navigator.clipboard.writeText(url).then(() => {
+                        alert('Verification link copied to clipboard automatically! You can now just paste it (Ctrl+V or Cmd+V) into an email to your supervisor.');
+                    }).catch(err => {
+                        // Fallback case if clipboard permissions are blocked by browser settings
+                        alert('Could not copy automatically. Link is:\n\n' + url);
+                    });
                 });
             }
         }, 0);
