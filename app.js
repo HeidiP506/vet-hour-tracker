@@ -13,8 +13,36 @@ const appScreen = document.getElementById('app-screen');
 const pageAnimal = document.getElementById('page-animal');
 const pageClinic = document.getElementById('page-clinic');
 
+// Tab switching listeners
 document.getElementById('nav-animal').addEventListener('click', () => switchTab('animal'));
 document.getElementById('nav-clinic').addEventListener('click', () => switchTab('clinic'));
+
+// New explicit modal event listeners to bypass module scope restrictions
+// This targets the main action buttons
+const addAnimalBtn = document.querySelector('button[onclick*="animal-modal"]');
+if (addAnimalBtn) {
+    addAnimalBtn.removeAttribute('onclick');
+    addAnimalBtn.addEventListener('click', () => toggleModal('animal-modal', true));
+}
+
+const addClinicBtn = document.querySelector('button[onclick*="clinic-modal"]');
+if (addClinicBtn) {
+    addClinicBtn.removeAttribute('onclick');
+    addClinicBtn.addEventListener('click', () => toggleModal('clinic-modal', true));
+}
+
+// This targets the cancel buttons inside the forms
+const cancelAnimalBtn = document.querySelector('#animal-modal button[onclick*="false"]');
+if (cancelAnimalBtn) {
+    cancelAnimalBtn.removeAttribute('onclick');
+    cancelAnimalBtn.addEventListener('click', () => toggleModal('animal-modal', false));
+}
+
+const cancelClinicBtn = document.querySelector('#clinic-modal button[onclick*="false"]');
+if (cancelClinicBtn) {
+    cancelClinicBtn.removeAttribute('onclick');
+    cancelClinicBtn.addEventListener('click', () => toggleModal('clinic-modal', false));
+}
 
 function switchTab(target) {
     if (target === 'animal') {
