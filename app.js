@@ -1,9 +1,9 @@
 // --- CONFIGURATION MANAGEMENT ---
 // REPLACE THESE STRINGS WITH THE EXACT VALUES FROM YOUR SUPABASE API ACCESS SETTINGS
-const SUPABASE_URL = "https://your-project-id.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.your-key-here";
+const SUPABASE_URL = "https://your-actual-project-id.supabase.co"; 
+const SUPABASE_ANON_KEY = "sb_publishable_NKiKPIolSfkuClYlgraUfQ_vLf-PzpP"; 
 
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentUser = null;
 
 // --- VIEW ROUTING ENGINE ---
