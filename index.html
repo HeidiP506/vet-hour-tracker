@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-900 text-slate-100">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VetTrack - Hour & Experience Ledger</title>
+    <title>VetTrack - Pre-Vet Experience Milestone Log</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -11,119 +11,209 @@
                 extend: {
                     colors: {
                         slate: {
-                            850: '#1e293b',
-                            750: '#334155'
+                            750: '#202e48',
+                            850: '#111c2e'
                         }
                     }
                 }
             }
         }
     </script>
-    <style>
-        /* Makes scrolling feel native and smooth on iPhones/Androids */
-        .overflow-x-auto {
-            -webkit-overflow-scrolling: touch;
-        }
-        /* Adds a clean, subtle scrollbar path look on desktop viewports */
-        .custom-scrollbar::-webkit-scrollbar {
-            height: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #0f172a;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #334155;
-            border-radius: 9999px;
-        }
-    </style>
 </head>
-<body class="min-h-full flex flex-col bg-slate-900 text-slate-100 antialiased overflow-x-hidden">
+<body class="bg-slate-900 text-slate-300 min-h-screen font-sans">
 
-    <header class="bg-slate-950 border-b border-slate-800 sticky top-0 z-40 w-full">
-        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-                <div class="bg-teal-600 p-2 rounded-xl text-white font-bold shadow-md shadow-teal-900/20">
-                    🐾
-                </div>
-                <div>
-                    <h1 class="text-base font-bold tracking-tight text-slate-100">VetTrack</h1>
-                    <p class="text-[11px] font-medium text-teal-400 tracking-wider uppercase">Pre-Vet Hours</p>
-                </div>
+    <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="bg-slate-800 p-8 rounded-2xl border border-slate-700 w-full max-w-md shadow-2xl space-y-6">
+            <div class="text-center space-y-2">
+                <h1 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-emerald-400 tracking-tight">VetTrack</h1>
+                <p class="text-sm text-slate-400">Log and verify your veterinary clinical milestones</p>
             </div>
             
-            <nav class="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
-                <button id="tab-animal" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-teal-600 text-white transition">
-                    Animal Exp
-                </button>
-                <button id="tab-clinic" class="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition">
-                    Clinical Shifts
-                </button>
-            </nav>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Email Address</label>
+                    <input id="auth-email" type="email" placeholder="prevet@university.edu" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-teal-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Password</label>
+                    <input id="auth-password" type="password" placeholder="••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-teal-500 transition">
+                </div>
+                
+                <div class="pt-2 space-y-3">
+                    <button id="login-btn" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-medium py-3 rounded-xl transition shadow-lg shadow-teal-900/20">Sign In</button>
+                    <button id="signup-btn" class="w-full bg-transparent border border-slate-600 hover:border-slate-500 text-slate-300 font-medium py-3 rounded-xl transition">Create Account</button>
+                </div>
+            </div>
         </div>
-    </header>
+    </div>
 
-    <main class="flex-1 p-3 md:p-6 max-w-6xl w-full mx-auto space-y-6 overflow-x-hidden">
-        
-        <section id="page-animal" class="space-y-4 w-full overflow-hidden">
-            <div class="flex justify-between items-center gap-4">
-                <div class="min-w-0">
-                    <h2 class="text-lg md:text-xl font-bold text-slate-100 truncate">General Animal Experience Logs</h2>
-                    <p class="text-xs text-slate-400 truncate">Track standard husbandry, shelter volunteering, and management</p>
-                </div>
-                <button id="add-animal-trigger" class="bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-md shadow-teal-900/10 shrink-0">
-                    + Add
+    <div id="app-screen" class="hidden min-h-screen flex flex-col">
+        <header class="bg-slate-850 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center gap-4 sticky top-0 z-40">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-teal-500 to-emerald-500 flex items-center justify-center font-black text-slate-900 text-lg">V</div>
+                <span class="text-xl font-bold text-slate-100 tracking-tight">VetTrack <span class="text-xs font-normal text-slate-500 ml-1">Milestones</span></span>
+            </div>
+            
+            <nav class="flex items-center space-x-2 bg-slate-900 p-1.5 rounded-xl border border-slate-800">
+                <button id="nav-animal" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-700 text-teal-400 transition">Animal Experience</button>
+                <button id="nav-clinic" class="px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-750 text-slate-300 transition">Clinic Verification</button>
+            </nav>
+
+            <div class="flex items-center space-x-4">
+                <button id="export-btn" class="bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 text-xs font-semibold px-4 py-2.5 rounded-xl transition flex items-center gap-2">
+                    📥 Export spreadsheet
                 </button>
+                <button id="logout-btn" class="text-xs font-medium text-slate-400 hover:text-rose-400 transition">Sign Out</button>
             </div>
+        </header>
 
-            <div class="w-full overflow-x-auto block border border-slate-800 rounded-2xl bg-slate-850 shadow-xl custom-scrollbar" style="-webkit-overflow-scrolling: touch;">
-                <table class="min-w-[750px] w-full text-left border-collapse table-auto whitespace-nowrap">
-                    <thead>
-                        <tr class="bg-slate-800/50 border-b border-slate-800 text-xs font-bold uppercase tracking-wider text-slate-400">
-                            <th class="p-4">Experience / Group Name</th>
-                            <th class="p-4">Date Range</th>
-                            <th class="p-4">Hours</th>
-                            <th class="p-4">Duties Summary</th>
-                            <th class="p-4">Contact</th>
-                            <th class="p-4">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="animal-table-body" class="text-sm divide-y divide-slate-800/40 text-slate-300">
-                        </tbody>
-                </table>
-            </div>
-        </section>
-
-        <section id="page-clinic" class="hidden space-y-4 w-full overflow-hidden">
-            <div class="flex justify-between items-center gap-4">
-                <div class="min-w-0">
-                    <h2 class="text-lg md:text-xl font-bold text-slate-100 truncate">Clinical &amp; Veterinary Shifts</h2>
-                    <p class="text-xs text-slate-400 truncate">Track operations performed under a certified DVM</p>
+        <main class="flex-1 p-6 max-w-6xl w-full mx-auto space-y-6">
+            <section id="page-animal" class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-100">General Animal Experience Logs</h2>
+                        <p class="text-xs text-slate-400">Track standard husbandry, shelter volunteering, and basic animal management hours</p>
+                    </div>
+                    <button id="add-animal-trigger" class="bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-md shadow-teal-900/10">
+                        + Add Experience
+                    </button>
                 </div>
-                <button id="add-clinic-trigger" class="bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-md shadow-teal-900/10 shrink-0">
-                    + Log Shift
-                </button>
-            </div>
 
-            <div class="w-full overflow-x-auto block border border-slate-800 rounded-2xl bg-slate-850 shadow-xl custom-scrollbar" style="-webkit-overflow-scrolling: touch;">
-                <table class="min-w-[850px] w-full text-left border-collapse table-auto whitespace-nowrap">
-                    <thead>
-                        <tr class="bg-slate-800/50 border-b border-slate-800 text-xs font-bold uppercase tracking-wider text-slate-400">
-                            <th class="p-4">Date Range</th>
-                            <th class="p-4">Hours</th>
-                            <th class="p-4">Clinical Duties / Procedures</th>
-                            <th class="p-4">Supervisor Authenticator</th>
-                            <th class="p-4">Status</th>
-                            <th class="p-4">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="clinic-table-body" class="text-sm divide-y divide-slate-800/40 text-slate-300">
+                <div class="bg-slate-850 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-800/50 border-b border-slate-800 text-xs font-bold uppercase tracking-wider text-slate-400">
+                                <th class="p-4">Experience / Group Name</th>
+                                <th class="p-4">Date Range</th>
+                                <th class="p-4">Hours</th>
+                                <th class="p-4">Duties Summary</th>
+                                <th class="p-4">Contact</th>
+                                <th class="p-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="animal-table-body" class="text-sm divide-y divide-slate-800/40 text-slate-300">
                         </tbody>
-                </table>
-            </div>
-        </section>
-    </main>
+                    </table>
+                </div>
+            </section>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js"></script>
+            <section id="page-clinic" class="hidden space-y-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-100">Clinical &amp; Veterinary Shifts</h2>
+                        <p class="text-xs text-slate-400">Track operations performed under a certified DVM with signature secure authorization trackers</p>
+                    </div>
+                    <button id="add-clinic-trigger" class="bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-md shadow-teal-900/10">
+                        + Log Vet Shift
+                    </button>
+                </div>
+
+                <div class="bg-slate-850 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-800/50 border-b border-slate-800 text-xs font-bold uppercase tracking-wider text-slate-400">
+                                <th class="p-4">Date Range</th>
+                                <th class="p-4">Hours</th>
+                                <th class="p-4">Clinical Duties / Procedures</th>
+                                <th class="p-4">Supervisor Authenticator</th>
+                                <th class="p-4">Status</th>
+                                <th class="p-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clinic-table-body" class="text-sm divide-y divide-slate-800/40 text-slate-300">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="animal-modal" class="hidden fixed inset-0 bg-slate-950/70 backdrop-blur-sm items-center justify-center p-4 z-50">
+        <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
+            <h3 id="animal-modal-title" class="text-lg font-bold text-slate-100">Add Animal Experience</h3>
+            <form id="animal-form" class="space-y-4">
+                <input type="hidden" id="animal-edit-id">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Organization / Event Name</label>
+                    <input id="anim-name" type="text" required placeholder="Humane Society Shelter Volunteer" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-teal-500 transition">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Start Date</label>
+                        <input id="anim-start-date" type="date" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-teal-500 transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">End Date</label>
+                        <input id="anim-end-date" type="date" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-teal-500 transition">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Total Hours</label>
+                    <input id="anim-hours" type="number" step="0.25" required placeholder="4.5" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-teal-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Duties Summary</label>
+                    <textarea id="anim-duties" required rows="3" placeholder="Feline handling, sanitizing operations, logging clinical behavior..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-teal-500 transition resize-none"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Reference Contact Info</label>
+                    <input id="anim-contact" type="text" required placeholder="John Doe, Shelter Director (555-0192)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-teal-500 transition">
+                </div>
+                
+                <div class="flex justify-end space-x-3 pt-2">
+                    <button type="button" id="cancel-animal-btn" class="px-4 py-2 text-sm font-semibold text-slate-400 hover:text-slate-200 transition">Cancel</button>
+                    <button type="submit" class="bg-teal-600 hover:bg-teal-500 text-white font-semibold text-sm px-5 py-2 rounded-xl transition">Save Log Entry</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="clinic-modal" class="hidden fixed inset-0 bg-slate-950/70 backdrop-blur-sm items-center justify-center p-4 z-50">
+        <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
+            <h3 id="clinic-modal-title" class="text-lg font-bold text-slate-100">Log Clinical Veterinary Shift</h3>
+            <form id="clinic-form" class="space-y-4">
+                <input type="hidden" id="clinic-edit-id">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Start Date</label>
+                        <input id="clin-start-date" type="date" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-teal-500 transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">End Date</label>
+                        <input id="clin-end-date" type="date" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-teal-500 transition">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Total Hours</label>
+                    <input id="clin-hours" type="number" step="0.25" required placeholder="8.0" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-teal-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Clinical Procedures &amp; Observation Duties</label>
+                    <textarea id="clin-duties" required rows="4" placeholder="Observed canine dental prophylaxis, monitored post-op anesthesia vitals, shadow-assisted ultrasound setups..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-teal-500 transition resize-none"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Supervisor Veterinarian Email</label>
+                    <input id="clin-email" type="email" required placeholder="veterinarian@clinic.com" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-teal-500 transition">
+                </div>
+                
+                <div class="flex justify-end space-x-3 pt-2">
+                    <button type="button" id="cancel-clinic-btn" class="px-4 py-2 text-sm font-semibold text-slate-400 hover:text-slate-200 transition">Cancel</button>
+                    <button type="submit" class="bg-teal-600 hover:bg-teal-500 text-white font-semibold text-sm px-5 py-2 rounded-xl transition">Save Vet Entry</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="signature-view-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm items-center justify-center p-4 z-50">
+        <div class="bg-slate-800 border border-slate-700 w-full max-w-sm rounded-2xl p-6 shadow-2xl text-center space-y-4">
+            <h3 class="text-lg font-bold text-slate-100">Supervisor Signature</h3>
+            <div class="bg-white p-4 rounded-xl border border-slate-600 flex items-center justify-center min-h-[160px]">
+                <img id="modal-signature-img" src="" alt="Supervisor Signature" class="max-w-full max-h-40 object-contain">
+            </div>
+            <button id="close-sig-viewer-btn" class="w-full bg-slate-700 text-slate-300 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-600 transition">Close Window</button>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
 </body>
 </html>
