@@ -18,29 +18,22 @@ const pageClinic = document.getElementById('page-clinic');
 document.getElementById('nav-animal').addEventListener('click', () => switchTab('animal'));
 document.getElementById('nav-clinic').addEventListener('click', () => switchTab('clinic'));
 
-const addAnimalBtn = document.querySelector('button[onclick*="animal-modal"]');
-if (addAnimalBtn) {
-    addAnimalBtn.removeAttribute('onclick');
-    addAnimalBtn.addEventListener('click', () => toggleModal('animal-modal', true));
-}
+document.getElementById('add-animal-trigger').addEventListener('click', () => {
+    document.getElementById('animal-modal-title').innerText = "Add Animal Experience";
+    document.getElementById('animal-edit-id').value = '';
+    document.getElementById('animal-form').reset();
+    toggleModal('animal-modal', true);
+});
 
-const addClinicBtn = document.querySelector('button[onclick*="clinic-modal"]');
-if (addClinicBtn) {
-    addClinicBtn.removeAttribute('onclick');
-    addClinicBtn.addEventListener('click', () => toggleModal('clinic-modal', true));
-}
+document.getElementById('add-clinic-trigger').addEventListener('click', () => {
+    document.getElementById('clinic-modal-title').innerText = "Log Clinical Veterinary Shift";
+    document.getElementById('clinic-edit-id').value = '';
+    document.getElementById('clinic-form').reset();
+    toggleModal('clinic-modal', true);
+});
 
-const cancelAnimalBtn = document.querySelector('#animal-modal button[onclick*="false"]');
-if (cancelAnimalBtn) {
-    cancelAnimalBtn.removeAttribute('onclick');
-    cancelAnimalBtn.addEventListener('click', () => toggleModal('animal-modal', false));
-}
-
-const cancelClinicBtn = document.querySelector('#clinic-modal button[onclick*="false"]');
-if (cancelClinicBtn) {
-    cancelClinicBtn.removeAttribute('onclick');
-    cancelClinicBtn.addEventListener('click', () => toggleModal('clinic-modal', false));
-}
+document.getElementById('cancel-animal-btn').addEventListener('click', () => toggleModal('animal-modal', false));
+document.getElementById('cancel-clinic-btn').addEventListener('click', () => toggleModal('clinic-modal', false));
 
 document.getElementById('close-sig-viewer-btn')?.addEventListener('click', () => {
     toggleModal('signature-view-modal', false);
@@ -102,27 +95,40 @@ document.getElementById('logout-btn').addEventListener('click', () => supabaseCl
 async function loadData() {
     if (!currentUser) return;
     
-    const { data: animals } = await supabaseClient.from('animal_experience').select('*').order('date', { ascending: false });
+    // Load Animal Experiences
+    const { data: animals } = await supabaseClient.from('animal_experience').select('*').order('start_date', { ascending: false });
     const animalBody = document.getElementById('animal-table-body');
     animalBody.innerHTML = '';
     animals?.forEach(row => {
+        const dateRangeDisplay = row.end_date ? `${row.start_date} to ${row.end_date}` : row.start_date;
         animalBody.innerHTML += `
             <tr class="hover:bg-slate-750 transition">
                 <td class="p-4 font-semibold text-slate-200">${escapeHtml(row.experience_name)}</td>
-                <td class="p-4">${row.date}</td>
+                <td class="p-4 whitespace-nowrap">${dateRangeDisplay}</td>
                 <td class="p-4 font-mono text-teal-400">${row.hours}</td>
                 <td class="p-4 max-w-xs truncate">${escapeHtml(row.duties)}</td>
                 <td class="p-4 text-slate-400">${escapeHtml(row.contact_name)}</td>
+                <td class="p-4 text-xs">
+                    <button id="edit-animal-${row.id}" class="text-teal-400 hover:underline block">Edit Entry</button>
+                </td>
             </tr>
         `;
+        
+        setTimeout(() => {
+            document.getElementById(`edit-animal-${row.id}`)?.addEventListener('click', () => {
+                editAnimalRow(row.id, row.experience_name, row.start_date, row.end_date, row.hours, row.duties, row.contact_name);
+            });
+        }, 0);
     });
 
-    const { data: clinics } = await supabaseClient.from('clinic_experience').select('*').order('date', { ascending: false });
+    // Load Clinic Shifts
+    const { data: clinics } = await supabaseClient.from('clinic_experience').select('*').order('start_date', { ascending: false });
     const clinicBody = document.getElementById('clinic-table-body');
     clinicBody.innerHTML = '';
     clinics?.forEach(row => {
         const isApproved = row.status === 'Approved';
         const badgeClass = isApproved ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+        const dateRangeDisplay = row.end_date ? `${row.start_date} to ${row.end_date}` : row.start_date;
         
         let signatureActionHtml = '<span class="text-slate-500 italic">Unsigned</span>';
         if (isApproved && row.signature_url) {
@@ -131,7 +137,7 @@ async function loadData() {
 
         clinicBody.innerHTML += `
             <tr class="hover:bg-slate-750 transition">
-                <td class="p-4">${row.date}</td>
+                <td class="p-4 whitespace-nowrap">${dateRangeDisplay}</td>
                 <td class="p-4 font-mono text-teal-400">${row.hours}</td>
                 <td class="p-4 max-w-xs truncate">${escapeHtml(row.duties)}</td>
                 <td class="p-4">
@@ -151,7 +157,7 @@ async function loadData() {
         
         setTimeout(() => {
             document.getElementById(`edit-clinic-${row.id}`)?.addEventListener('click', () => {
-                editClinicRow(row.id, row.date, row.hours, row.duties, row.supervisor_email);
+                editClinicRow(row.id, row.start_date, row.end_date, row.hours, row.duties, row.supervisor_email);
             });
             
             if (isApproved && row.signature_url) {
@@ -179,24 +185,52 @@ async function loadData() {
 }
 
 // --- MUTATION HANDLING ENGINE ---
+function editAnimalRow(id, name, startDate, endDate, hours, duties, contact) {
+    document.getElementById('animal-modal-title').innerText = "Edit Animal Experience";
+    document.getElementById('animal-edit-id').value = id;
+    document.getElementById('anim-name').value = name;
+    document.getElementById('anim-start-date').value = startDate;
+    document.getElementById('anim-end-date').value = endDate || startDate;
+    document.getElementById('anim-hours').value = hours;
+    document.getElementById('anim-duties').value = duties;
+    document.getElementById('anim-contact').value = contact;
+    toggleModal('animal-modal', true);
+}
+
 document.getElementById('animal-form').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const id = document.getElementById('animal-edit-id').value;
     const payload = {
         user_id: currentUser.id,
         experience_name: document.getElementById('anim-name').value,
-        date: document.getElementById('anim-date').value,
+        start_date: document.getElementById('anim-start-date').value,
+        end_date: document.getElementById('anim-end-date').value,
         hours: parseFloat(document.getElementById('anim-hours').value),
         duties: document.getElementById('anim-duties').value,
         contact_name: document.getElementById('anim-contact').value
     };
-    const { error } = await supabaseClient.from('animal_experience').insert([payload]);
-    if (error) alert(error.message);
-    else { toggleModal('animal-modal', false); document.getElementById('animal-form').reset(); loadData(); }
+    
+    let result;
+    if (id) {
+        result = await supabaseClient.from('animal_experience').update(payload).eq('id', id);
+    } else {
+        result = await supabaseClient.from('animal_experience').insert([payload]);
+    }
+
+    if (result.error) alert(result.error.message);
+    else { 
+        toggleModal('animal-modal', false); 
+        document.getElementById('animal-form').reset(); 
+        document.getElementById('animal-edit-id').value = '';
+        loadData(); 
+    }
 });
 
-function editClinicRow(id, date, hours, duties, email) {
+function editClinicRow(id, startDate, endDate, hours, duties, email) {
+    document.getElementById('clinic-modal-title').innerText = "Edit Clinical Veterinary Shift";
     document.getElementById('clinic-edit-id').value = id;
-    document.getElementById('clin-date').value = date;
+    document.getElementById('clin-start-date').value = startDate;
+    document.getElementById('clin-end-date').value = endDate || startDate;
     document.getElementById('clin-hours').value = hours;
     document.getElementById('clin-duties').value = duties;
     document.getElementById('clin-email').value = email;
@@ -208,7 +242,8 @@ document.getElementById('clinic-form').addEventListener('submit', async (e) => {
     const id = document.getElementById('clinic-edit-id').value;
     const payload = {
         user_id: currentUser.id,
-        date: document.getElementById('clin-date').value,
+        start_date: document.getElementById('clin-start-date').value,
+        end_date: document.getElementById('clin-end-date').value,
         hours: parseFloat(document.getElementById('clin-hours').value),
         duties: document.getElementById('clin-duties').value,
         supervisor_email: document.getElementById('clin-email').value,
@@ -235,29 +270,37 @@ document.getElementById('clinic-form').addEventListener('submit', async (e) => {
 
 // --- ADVANCED BINARY EXCEL GENERATOR WITH EMBEDDED IMAGES ---
 document.getElementById('export-btn').addEventListener('click', async () => {
-    const { data: animData } = await supabaseClient.from('animal_experience').select('*');
-    const { data: clinData } = await supabaseClient.from('clinic_experience').select('*');
+    const { data: animData } = await supabaseClient.from('animal_experience').select('*').order('start_date', { ascending: false });
+    const { data: clinData } = await supabaseClient.from('clinic_experience').select('*').order('start_date', { ascending: false });
 
-    // Create a new binary workbook using ExcelJS
     const workbook = new exceljs.Workbook();
     
-    // 1. Add Animal Experience Sheet
+    // 1. Animal Experience Sheet
     const ws1 = workbook.addWorksheet('Animal Experience');
     ws1.columns = [
         { header: 'Name', key: 'name', width: 30 },
-        { header: 'Date', key: 'date', width: 15 },
+        { header: 'Start Date', key: 'start_date', width: 15 },
+        { header: 'End Date', key: 'end_date', width: 15 },
         { header: 'Hours', key: 'hours', width: 12 },
         { header: 'Duties', key: 'duties', width: 40 },
         { header: 'Contact', key: 'contact', width: 30 }
     ];
     animData?.forEach(r => {
-        ws1.addRow({ name: r.experience_name, date: r.date, hours: Number(r.hours), duties: r.duties, contact: r.contact_name });
+        ws1.addRow({ 
+            name: r.experience_name, 
+            start_date: r.start_date, 
+            end_date: r.end_date || r.start_date, 
+            hours: Number(r.hours), 
+            duties: r.duties, 
+            contact: r.contact_name 
+        });
     });
 
-    // 2. Add Clinic Experience Sheet
+    // 2. Clinic Experience Sheet
     const ws2 = workbook.addWorksheet('Clinic Experience');
     ws2.columns = [
-        { header: 'Date', key: 'date', width: 15 },
+        { header: 'Start Date', key: 'start_date', width: 15 },
+        { header: 'End Date', key: 'end_date', width: 15 },
         { header: 'Hours', key: 'hours', width: 12 },
         { header: 'Duties', key: 'duties', width: 40 },
         { header: 'Supervisor Email', key: 'email', width: 25 },
@@ -269,10 +312,11 @@ document.getElementById('export-btn').addEventListener('click', async () => {
     if (clinData) {
         for (let i = 0; i < clinData.length; i++) {
             const r = clinData[i];
-            const currentRowNum = i + 2; // Rows are 1-indexed, header is row 1
+            const currentRowNum = i + 2; 
             
             ws2.addRow({
-                date: r.date,
+                start_date: r.start_date,
+                end_date: r.end_date || r.start_date,
                 hours: Number(r.hours),
                 duties: r.duties,
                 email: r.supervisor_email,
@@ -281,9 +325,7 @@ document.getElementById('export-btn').addEventListener('click', async () => {
                 sig: r.signature_url ? '' : 'No Signature Logged'
             });
 
-            // If a signature drawing exists, decode it and embed it as an inline graphic
             if (r.signature_url && r.signature_url.startsWith('data:image')) {
-                // Adjust row height to make space for the handwritten graphic
                 ws2.getRow(currentRowNum).height = 55;
                 
                 const imageId = workbook.addImage({
@@ -292,7 +334,7 @@ document.getElementById('export-btn').addEventListener('click', async () => {
                 });
                 
                 ws2.addImage(imageId, {
-                    tl: { col: 6, row: currentRowNum - 1 },
+                    tl: { col: 7, row: currentRowNum - 1 },
                     ext: { width: 150, height: 65 },
                     editAs: 'undefined'
                 });
@@ -300,17 +342,16 @@ document.getElementById('export-btn').addEventListener('click', async () => {
         }
     }
 
-    // Style headers for both worksheets beautifully
+    // Style headers
     [ws1, ws2].forEach(ws => {
         ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
         ws.getRow(1).eachCell(cell => {
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } }; // Dark slate blue
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
             cell.alignment = { vertical: 'middle', horizontal: 'left' };
         });
         ws.getRow(1).height = 25;
     });
 
-    // Write file binary buffer output directly to browser download trigger
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = URL.createObjectURL(blob);
